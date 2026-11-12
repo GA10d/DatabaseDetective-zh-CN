@@ -1494,5 +1494,12 @@
 "audio/messages/misc/fail": "audio/messages/misc/失败",
 "text/messages/misc/i need their real name": "text/messages/misc/我要的是真名",
 "audio/messages/misc/i need their real name": "audio/messages/misc/我要的是真名"
-}
+},
+"ui_nowrap": [
+"Tab 1",
+"Tab 2",
+"Tab 3",
+"Tab 4",
+"Tab 5"
+]
 }

@@ -174,6 +174,7 @@ def patch_game(staging, log):
     font_bytes = open(font_path, "rb").read()
     ui, tas, manual = tr["ui"], tr["textassets"], tr["manual"]
     res_renames = tr.get("resources", {})
+    ui_nowrap = set(tr.get("ui_nowrap", []))
     data_path = staging  # 从临时副本读取，避免占用游戏文件
     st = {"text": 0, "ui": 0, "manual": 0, "font": 0, "fallback_asset": None, "settings": 0, "res": 0}
     outputs = {}
@@ -222,6 +223,8 @@ def patch_game(staging, log):
                 if full in ("TMPro.TextMeshProUGUI", "TMPro.TextMeshPro"):
                     t = o.read_typetree(nodes[full])
                     if t["m_text"] in ui:
+                        if t["m_text"] in ui_nowrap:
+                            t["m_TextWrappingMode"] = 0   # 文本框按英文宽度设计，中文放不下时不要换行
                         t["m_text"] = ui[t["m_text"]]
                         o.save_typetree(t, nodes[full]); changed = True; st["ui"] += 1
                 elif full in ("TMPro.TMP_FontAsset", "TMPro.TMP_Settings"):
