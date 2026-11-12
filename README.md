@@ -16,7 +16,7 @@
 
 ## 安装
 
-1. 到 [Releases](../../releases) 下载 `DatabaseDetective_简体中文汉化.exe`。
+1. 到 [Releases](../../releases) 下载 `DatabaseDetective_zh-CN_v1.0.exe`。
 2. 双击运行。程序会自动找到 Steam 里的游戏目录（找不到时会让你手动输入），选择 `1` 安装。
 3. 安装前会自动把原版文件备份到游戏目录下的 `zh_backup` 文件夹。
 
