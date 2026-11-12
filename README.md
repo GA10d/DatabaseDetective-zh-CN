@@ -4,6 +4,10 @@
 
 > Unofficial Simplified Chinese fan translation patch for *Database Detective: Minor Crimes Division*.
 
+**[⬇ 下载最新版](../../releases/latest)**
+
+![汉化效果：游戏内《使用手册》与桌面](docs/screenshot.png)
+
 ## 汉化内容
 
 - 全部剧情对白、结局、证词、结尾字幕
