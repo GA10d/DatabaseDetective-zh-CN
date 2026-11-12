@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """Database Detective: Minor Crimes Division 简体中文汉化补丁 安装/还原程序"""
-import os, sys, json, hashlib, shutil, re, traceback
+import os, sys, json, hashlib, shutil, re, struct, traceback
 
-VERSION = "1.0"
+VERSION = "1.1"
 FILES = ["resources.assets", "sharedassets0.assets", "sharedassets1.assets", "level0", "level1", "level2"]
+DLL_FILE = "Managed/Scripts.dll"   # 代码里的硬编码文本（引导小人台词等）
 BACKUP_DIR = "zh_backup"
 FALLBACK_ASSET_NAME = "LiberationSans SDF - Fallback"
 SOURCE_FONT_NAME = "LiberationSans"
@@ -114,6 +115,62 @@ def script_name(o):
     return (s.m_Namespace + "." if s.m_Namespace else "") + s.m_ClassName
 
 
+# ---------------- DLL 硬编码字符串（原位覆盖 #US 堆） ----------------
+def _us_heap(data):
+    i = data.find(b"BSJB")
+    if i < 0:
+        raise ValueError("找不到 .NET 元数据")
+    vlen = struct.unpack_from("<I", data, i + 12)[0]
+    p = i + 16 + vlen
+    nstreams = struct.unpack_from("<H", data, p + 2)[0]; p += 4
+    for _ in range(nstreams):
+        off, size = struct.unpack_from("<II", data, p); p += 8
+        e = data.index(b"\0", p); name = data[p:e]; p = (e + 4) & ~3
+        if name == b"#US":
+            return i + off, size
+    raise ValueError("找不到 #US 字符串堆")
+
+
+def _blob_len(data, p):
+    b = data[p]
+    if b & 0x80 == 0:
+        return b, 1
+    if b & 0xC0 == 0x80:
+        return ((b & 0x3F) << 8) | data[p + 1], 2
+    return ((b & 0x1F) << 24) | (data[p + 1] << 16) | (data[p + 2] << 8) | data[p + 3], 4
+
+
+def patch_dll_strings(path, mapping):
+    """把 #US 堆里与 mapping 键完全相同的字符串原位替换为译文（译文不得长于原文）。返回替换数。"""
+    data = bytearray(open(path, "rb").read())
+    base, size = _us_heap(data)
+    p, n_done = base + 1, 0
+    while p < base + size:
+        n, w = _blob_len(data, p)
+        if n == 0:
+            p += w; continue
+        en = bytes(data[p + w:p + w + n - 1]).decode("utf-16-le", "replace")
+        zh = mapping.get(en)
+        if zh is not None and len(zh) <= len(en):
+            raw = zh.encode("utf-16-le")
+            nn = len(raw) + 1
+            if w == 1:
+                data[p] = nn
+            elif w == 2:
+                data[p] = 0x80 | (nn >> 8); data[p + 1] = nn & 0xFF
+            else:
+                data[p:p + 4] = bytes([0xC0 | (nn >> 24), (nn >> 16) & 0xFF, (nn >> 8) & 0xFF, nn & 0xFF])
+            data[p + w:p + w + len(raw)] = raw
+            data[p + w + len(raw)] = 1 if any(ord(c) > 0x7E for c in zh) else 0
+            # 剩余字节填 0x00：每个都是合法的空条目，堆仍可顺序解析
+            for k in range(p + w + nn, p + w + n):
+                data[k] = 0
+            n_done += 1
+        p += w + n
+    open(path, "wb").write(bytes(data))
+    return n_done
+
+
 def patch_game(staging, log):
     import UnityPy
     from PIL import Image
@@ -219,8 +276,8 @@ def install(game, log):
                                "请先在 Steam 中右键游戏 → 属性 → 已安装文件 → 验证游戏文件的完整性，再运行本程序。")
     os.makedirs(bdir, exist_ok=True)
     log("备份原版文件到 " + bdir)
-    for fn in FILES:
-        shutil.copy2(os.path.join(data_path, fn), os.path.join(bdir, fn))
+    for fn in FILES + [DLL_FILE]:
+        shutil.copy2(os.path.join(data_path, fn), os.path.join(bdir, os.path.basename(fn)))
     log("正在打补丁（大约需要 1~3 分钟）……")
     import tempfile
     staging = tempfile.mkdtemp(prefix="dd_zh_")
@@ -238,10 +295,15 @@ def install(game, log):
         patched[fn] = sha1(dst)
     import gc; gc.collect()
     shutil.rmtree(staging, ignore_errors=True)
-    json.dump({"version": VERSION, "patched": patched}, open(manifest_path(game), "w", encoding="utf-8"), indent=1)
-    log(f"完成！剧情/提示 {st['text']} 个文件，界面文本 {st['ui']} 处，手册 {st['manual']} 页，中文字体已加入。")
     tr = json.load(open(os.path.join(data_dir(), "translation.json"), encoding="utf-8"))
-    if st["text"] < len(tr["textassets"]) or st["manual"] < len(tr["manual"]):
+    dll_map = tr.get("dll", {})
+    if dll_map:
+        dll_path = os.path.join(data_path, DLL_FILE)
+        st["dll"] = patch_dll_strings(dll_path, dll_map)
+        patched[DLL_FILE] = sha1(dll_path)
+    json.dump({"version": VERSION, "patched": patched}, open(manifest_path(game), "w", encoding="utf-8"), indent=1)
+    log(f"完成！剧情/提示 {st['text']} 个文件，界面文本 {st['ui']} 处，代码内文本 {st.get('dll', 0)} 处，手册 {st['manual']} 页，中文字体已加入。")
+    if st["text"] < len(tr["textassets"]) or st["manual"] < len(tr["manual"]) or st.get("dll", 0) < len(dll_map):
         log("提示：有部分内容没有匹配上（游戏可能已更新），这些地方会保持英文。")
 
 
@@ -254,7 +316,7 @@ def restore(game, log, quiet=False):
         log("当前游戏文件不是本补丁安装的版本（可能游戏已更新或已在 Steam 验证过文件），不做还原以免覆盖新文件。")
         return
     for fn in m["patched"]:
-        shutil.copy2(os.path.join(bdir, fn), os.path.join(game, "copOS_Data", fn))
+        shutil.copy2(os.path.join(bdir, os.path.basename(fn)), os.path.join(game, "copOS_Data", fn))
     os.remove(manifest_path(game))
     if not quiet:
         log("已还原为英文原版。")

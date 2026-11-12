@@ -25,7 +25,7 @@
 [h1]下载与安装[/h1]
 [olist]
 [*]下载：[url=https://github.com/GA10d/DatabaseDetective-zh-CN/releases]GitHub Releases[/url]
-[*]双击运行 DatabaseDetective_zh-CN_v1.0.exe，程序会自动找到游戏目录，输入 1 安装。
+[*]双击运行 DatabaseDetective_zh-CN_v1.1.exe，程序会自动找到游戏目录，输入 1 安装。
 [*]启动游戏即可。
 [/olist]
 安装前会自动把原版文件备份到游戏目录下的 zh_backup 文件夹。

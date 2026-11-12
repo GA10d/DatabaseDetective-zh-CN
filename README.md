@@ -12,6 +12,7 @@
 
 - 全部剧情对白、结局、证词、结尾字幕
 - 破案思路提示、SQL 写法提示
+- 引导小人的教程台词与帮助菜单、案件名、SQL 语法报错、各类弹窗提示（v1.1 起）
 - 界面、按钮、桌面应用，以及游戏内各个网站的内容
 - 游戏内《使用手册》全部 24 页（重新排版）
 - 加入中文字体（Noto Sans SC）
@@ -20,7 +21,7 @@
 
 ## 安装
 
-1. 到 [Releases](../../releases) 下载 `DatabaseDetective_zh-CN_v1.0.exe`。
+1. 到 [Releases](../../releases) 下载最新的 `DatabaseDetective_zh-CN_vX.X.exe`。
 2. 双击运行。程序会自动找到 Steam 里的游戏目录（找不到时会让你手动输入），选择 `1` 安装。
 3. 安装前会自动把原版文件备份到游戏目录下的 `zh_backup` 文件夹。
 
@@ -60,6 +61,7 @@ pyinstaller --onefile --console --name DatabaseDetective_zh --add-data "src/data
 - 剧情、提示（TextAsset）：按原文 SHA-1 匹配后替换；
 - 界面文本（TextMeshPro）：按英文原文匹配后替换；
 - 手册贴图：按贴图名和尺寸匹配后替换为中文版图片；
+- 代码内文本（`Managed/Scripts.dll`）：在 .NET 元数据的 `#US` 字符串堆中按英文原文找到条目，原位写入不长于原文的译文、剩余字节补 0，代码引用的偏移不变，不需要重新编译；日志、数据值、作为键或比较用的字符串一律不改；
 - 字体：把游戏自带的动态备用字体换成 Noto Sans SC，并加入 TMP 全局 fallback。
 
 `src/data/translation.json` 是全部译文，欢迎提交 Issue 或 PR 修正翻译。
@@ -68,7 +70,7 @@ pyinstaller --onefile --console --name DatabaseDetective_zh --add-data "src/data
 
 ```
 src/zh_patcher.py            安装 / 还原程序
-src/data/translation.json    全部译文（textassets 按原文 SHA-1 索引，ui 按英文原文索引）
+src/data/translation.json    全部译文（textassets 按原文 SHA-1 索引，ui / dll 按英文原文索引）
 src/data/typetrees.json      TextMeshPro 组件的类型树（免去运行时依赖 .NET）
 src/data/manual/             手册中文版图片
 src/data/NotoSansSC-Regular.ttf, OFL.txt   中文字体及许可
