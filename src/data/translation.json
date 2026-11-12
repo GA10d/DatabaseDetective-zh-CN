@@ -1021,6 +1021,16 @@
 "file": "23_8-3.png",
 "w": 1000,
 "h": 1269
+},
+"text": {
+"file": "web_denied_top.png",
+"w": 256,
+"h": 44
+},
+"text bottom": {
+"file": "web_denied_bottom.png",
+"w": 256,
+"h": 44
 }
 },
 "dll": {

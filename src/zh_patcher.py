@@ -305,7 +305,7 @@ def install(game, log):
         st["dll"] = patch_dll_strings(dll_path, dll_map)
         patched[DLL_FILE] = sha1(dll_path)
     json.dump({"version": VERSION, "patched": patched}, open(manifest_path(game), "w", encoding="utf-8"), indent=1)
-    log(f"完成！剧情/提示 {st['text']} 个文件，界面文本 {st['ui']} 处，代码内文本 {st.get('dll', 0)} 处，手册 {st['manual']} 页，中文字体已加入。")
+    log(f"完成！剧情/提示 {st['text']} 个文件，界面文本 {st['ui']} 处，代码内文本 {st.get('dll', 0)} 处，手册与图片 {st['manual']} 张，中文字体已加入。")
     if st["text"] < len(tr["textassets"]) or st["manual"] < len(tr["manual"]) or st.get("dll", 0) < len(dll_map):
         log("提示：有部分内容没有匹配上（游戏可能已更新），这些地方会保持英文。")
 
