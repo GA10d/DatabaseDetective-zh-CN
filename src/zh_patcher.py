@@ -2,8 +2,9 @@
 """Database Detective: Minor Crimes Division 简体中文汉化补丁 安装/还原程序"""
 import os, sys, json, hashlib, shutil, re, struct, traceback
 
-VERSION = "1.1"
-FILES = ["resources.assets", "sharedassets0.assets", "sharedassets1.assets", "level0", "level1", "level2"]
+VERSION = "1.2"
+FILES = ["resources.assets", "sharedassets0.assets", "sharedassets1.assets", "level0", "level1", "level2",
+         "globalgamemanagers"]  # globalgamemanagers：资源索引（部分消息按标题加载）
 DLL_FILE = "Managed/Scripts.dll"   # 代码里的硬编码文本（引导小人台词等）
 BACKUP_DIR = "zh_backup"
 FALLBACK_ASSET_NAME = "LiberationSans SDF - Fallback"
@@ -93,20 +94,10 @@ def build_nodes(raw):
 
 
 def face_info(old, font_path):
-    from fontTools.ttLib import TTFont
-    f = TTFont(font_path)
-    pt = old["m_PointSize"]; upem = f["head"].unitsPerEm; s = pt / upem
-    hh, os2, post = f["hhea"], f["OS/2"], f["post"]
+    """只改字体名，保留原字体的行高/上下沿等度量：
+    Noto 的上沿(1.16em)比原字体(0.9em)高很多，用它自己的度量会让纯中文行变高、压到下方元素。"""
     fi = dict(old)
-    fi.update({
-        "m_FamilyName": "Noto Sans SC", "m_StyleName": "Regular", "m_UnitsPerEM": upem,
-        "m_LineHeight": (hh.ascent - hh.descent + hh.lineGap) * s,
-        "m_AscentLine": hh.ascent * s, "m_DescentLine": hh.descent * s,
-        "m_CapLine": getattr(os2, "sCapHeight", 733) * s, "m_MeanLine": getattr(os2, "sxHeight", 543) * s,
-        "m_SuperscriptOffset": hh.ascent * s, "m_SubscriptOffset": hh.descent * s,
-        "m_UnderlineOffset": post.underlinePosition * s, "m_UnderlineThickness": post.underlineThickness * s,
-        "m_StrikethroughThickness": post.underlineThickness * s,
-    })
+    fi.update({"m_FamilyName": "Noto Sans SC", "m_StyleName": "Regular"})
     return fi
 
 
@@ -182,8 +173,9 @@ def patch_game(staging, log):
     font_path = os.path.join(D, "NotoSansSC-Regular.ttf")
     font_bytes = open(font_path, "rb").read()
     ui, tas, manual = tr["ui"], tr["textassets"], tr["manual"]
+    res_renames = tr.get("resources", {})
     data_path = staging  # 从临时副本读取，避免占用游戏文件
-    st = {"text": 0, "ui": 0, "manual": 0, "font": 0, "fallback_asset": None, "settings": 0}
+    st = {"text": 0, "ui": 0, "manual": 0, "font": 0, "fallback_asset": None, "settings": 0, "res": 0}
     outputs = {}
     for fn in FILES:
         log(f"  处理 {fn} ...")
@@ -211,6 +203,17 @@ def patch_game(staging, log):
                         d.set_image(img, target_format=fmt); d.save(); changed = True; st["manual"] += 1
             elif tn == "Font":
                 fonts[o.path_id] = o
+            elif tn == "ResourceManager" and res_renames:
+                # 资源索引改名：代码按（已汉化的）标题拼路径加载消息文本/语音
+                t = o.read_typetree()
+                new = []
+                for k, v in t["m_Container"]:
+                    if k in res_renames:
+                        k = res_renames[k]; st["res"] += 1
+                    new.append((k, v))
+                new.sort(key=lambda kv: kv[0].encode("utf-8"))
+                t["m_Container"] = new
+                o.save_typetree(t); changed = True
             elif tn == "MonoBehaviour":
                 try:
                     full = script_name(o)
